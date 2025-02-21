@@ -1,0 +1,23 @@
+{
+  "swagger": "2.0",
+  "info": {},
+  "paths": {
+    "/products": {
+      "get": {
+        "description": "Returns a list of products",
+        "tags": [
+          "products"
+        ],
+        "operationId": "listProducts",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/productsResponse"
+          },
+          "500": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    }
+  }
+}

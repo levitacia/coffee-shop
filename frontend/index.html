@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Управление продуктами</title>
+  <!-- Подключение Tailwind (например, через CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+  <div class="max-w-4xl mx-auto">
+    <!-- Заголовок -->
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">Управление продуктами</h1>
+
+    <!-- Форма добавления продукта -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">Добавить новый продукт</h2>
+      <form id="addProductForm" class="space-y-4">
+        <div>
+          <label class="block text-gray-700">Название</label>
+          <input type="text" name="name" class="w-full p-2 border rounded" required>
+        </div>
+        <div>
+          <label class="block text-gray-700">Описание</label>
+          <textarea name="description" class="w-full p-2 border rounded"></textarea>
+        </div>
+        <div>
+          <label class="block text-gray-700">Цена</label>
+          <input type="number" name="price" step="0.01" class="w-full p-2 border rounded" required>
+        </div>
+        <div>
+          <label class="block text-gray-700">SKU (формат: xxxx-xxxx-xxxx)</label>
+          <input type="text" name="sku" pattern="[a-z]{4}-[a-z]{4}-[a-z]{4}" class="w-full p-2 border rounded" required>
+        </div>
+        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded">
+          Добавить
+        </button>
+      </form>
+    </div>
+
+    <!-- Список продуктов -->
+    <div class="bg-white rounded-lg shadow-lg p-6">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">Список продуктов</h2>
+      <div id="productsList" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <script>
+    // Загрузка продуктов
+    async function loadProducts() {
+      try {
+        const response = await fetch('http://localhost:8080/products');
+        const products = await response.json();
+        const productsDiv = document.getElementById('productsList');
+        productsDiv.innerHTML = '';
+        
+        products.forEach(product => {
+          const productElement = document.createElement('div');
+          productElement.className = 'border p-4 rounded flex justify-between items-center';
+          productElement.innerHTML = `
+            <div>
+              <h3 class="font-bold">${product.name}</h3>
+              <p class="text-gray-600">${product.description}</p>
+              <p class="text-gray-800">Цена: $${product.price}</p>
+              <p class="text-gray-600">SKU: ${product.sku}</p>
+            </div>
+            <div>
+              <!-- Кнопка обновить -->
+              <button onclick="updateProduct(${product.id})" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded">
+                Обновить
+              </button>
+              <button onclick="deleteProduct(${product.id})" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded">
+                Удалить
+              </button>
+            </div>
+          `;
+          productsDiv.appendChild(productElement);
+        });
+      } catch (error) {
+        console.error('Ошибка при загрузке продуктов:', error);
+      }
+    }
+
+    // Добавление продукта
+    document.getElementById('addProductForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const product = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        price: parseFloat(formData.get('price')),
+        sku: formData.get('sku')
+      };
+
+      try {
+        await fetch('http://localhost:8080/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(product)
+        });
+        e.target.reset();
+        loadProducts();
+      } catch (error) {
+        console.error('Ошибка при добавлении продукта:', error);
+      }
+    });
+
+    // Удаление продукта
+    async function deleteProduct(id) {
+      try {
+        await fetch(`http://localhost:8080/products/${id}`, {
+          method: 'DELETE'
+        });
+        loadProducts();
+      } catch (error) {
+        console.error('Ошибка при удалении продукта:', error);
+      }
+    }
+
+    async function updateProduct(id) {
+      try {
+        const response = await fetch(`http://localhost:8080/products/${id}`);
+        const currentProduct = await response.json();
+        
+        const formData = new FormData(document.getElementById('addProductForm'));
+        const updates = { ...currentProduct }; // Копируем все текущие поля
+        
+        // Обновляем только заполненные поля
+        for (const [key, value] of formData.entries()) {
+          if (value.trim() !== '') {
+            updates[key] = key === 'price' ? parseFloat(value) : value;
+          }
+        }
+
+        await fetch(`http://localhost:8080/products/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates)
+        });
+        
+        document.getElementById('addProductForm').reset();
+        loadProducts();
+      } catch (error) {
+        console.error('Ошибка при обновлении продукта:', error);
+      }
+    }
+
+    // Загрузка продуктов при старте
+    loadProducts();
+  </script>
+</body>
+</html>
